@@ -1,0 +1,8 @@
+.env
+.venv
+__pycache__
+.pytest_cache
+__marimo__
+result
+.direnv
+.devenv
