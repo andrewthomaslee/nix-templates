@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-from moscripts import greet
+from moscripts import main
 
 
 if __name__ == "__main__":
-    greet()
+    main()
