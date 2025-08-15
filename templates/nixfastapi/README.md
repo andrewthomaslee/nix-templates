@@ -1,30 +1,32 @@
-# moscripts
-A collection of Python scripts
+# nixfastapi
+FastAPI managed with Nix and uv2nix
 
-
-## Determinate Systems Nix installer
+## Install Nix CLI
 Determinate Nix Installer is the easiest and most reliable way to install Nix on your system. This will enable flakes by default.
 1. Download [Determinate Systems Nix installer](https://github.com/DeterminateSystems/nix-installer) with one command:
 ```bash
 curl -fsSL https://install.determinate.systems/nix | sh -s -- install --determinate
 ```
 
-
-## Discover flake options
+# Discover available flake options
 ```bash
-nix flake show github:andrewthomaslee/moscripts
+nix flake show
 ```
 
-## Usage
-To run apps:
+# Usage
+To start development shell:
 ```bash
-nix run github:andrewthomaslee/moscripts#greet
+nix develop
 ```
-To build package:
+or
 ```bash
-nix build github:andrewthomaslee/moscripts
+nix develop .#impure
 ```
-To build docker image:
+To build default package ( docker image ):
 ```bash
-nix build github:andrewthomaslee/moscripts#packages.x86_64-linux.greet-container
+nix build
+```
+To build app as file bundle:
+```bash
+nix build .#bundledApp
 ```
