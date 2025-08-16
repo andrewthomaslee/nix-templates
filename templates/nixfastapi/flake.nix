@@ -130,6 +130,31 @@
         then docker
         else bundledApp;
     });
+    # buildLoadRun | buildBundledApp ( docker image or bundled app )
+    apps = forAllSystems (system: let
+      pkgs = nixpkgs.legacyPackages.${system};
+      buildLoadRun = pkgs.writeShellScriptBin "buildLoadRun" ''
+        #!/usr/bin/env bash
+        exec ${./scripts/buildLoadRun.sh} "$@"
+      '';
+      buildBundledApp = pkgs.writeShellScriptBin "buildBundledApp" ''
+        #!/usr/bin/env bash
+        exec ${./scripts/buildBundledApp.sh} "$@"
+      '';
+    in rec {
+      docker = {
+        type = "app";
+        program = "${buildLoadRun}/bin/buildLoadRun";
+      };
+      bundledApp = {
+        type = "app";
+        program = "${buildBundledApp}/bin/buildBundledApp";
+      };
+      default =
+        if pkgs.stdenv.isLinux
+        then docker
+        else bundledApp;
+    });
 
     devShells = forAllSystems (system: let
       pkgs = nixpkgs.legacyPackages.${system};
@@ -203,10 +228,9 @@
         shellHook = ''
           unset PYTHONPATH
           export REPO_ROOT=$(git rev-parse --show-toplevel)
-          cd $REPO_ROOT
           ${pkgs.uv}/bin/uv sync
           source .venv/bin/activate
-          source ${./scripts/tmux-startup.sh}
+          source ${./scripts/tmuxStartup.sh}
         '';
       };
       # This devShell uses uv2nix to construct a virtual environment purely from Nix, using the same dependency specification as the application.
@@ -225,7 +249,7 @@
           unset PYTHONPATH
           export REPO_ROOT=$(git rev-parse --show-toplevel)
           source ${virtualenvDev}/bin/activate
-          source ${./scripts/tmux-startup.sh}
+          source ${./scripts/tmuxStartup.sh}
         '';
       };
     });
