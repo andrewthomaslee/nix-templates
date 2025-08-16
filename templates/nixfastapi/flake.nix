@@ -219,7 +219,6 @@
           yazi
           brave
           firefox
-          ladybird
         ]
         ++ (lib.optionals pkgs.stdenv.isLinux [chromium])
         ++ [wrappedTmux];

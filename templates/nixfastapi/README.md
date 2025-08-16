@@ -65,7 +65,6 @@ nix build .#checks.<system>.pytest
 Included web browsers in the devShell:
 - Brave
 - Firefox
-- Ladybird
 - Chromium ( Linux only )
 
 ### Firefox issues with CSS...
