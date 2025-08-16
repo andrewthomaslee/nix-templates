@@ -175,16 +175,23 @@
       wrappedTmux = pkgs.writeShellScriptBin "tmux" ''
         exec ${pkgs.tmux}/bin/tmux -f ${tmuxConf} "$@"
       '';
+      # Packages to install in devShells
+      devPackages = with pkgs;
+        [
+          uv
+          tailwindcss_4
+          watchman
+          yazi
+        ]
+        ++ [wrappedTmux];
     in {
       # This devShell simply adds Python & uv and undoes the dependency leakage done by Nixpkgs Python infrastructure.
       impure = pkgs.mkShell {
-        packages = [
-          wrappedTmux
-          python
-          pkgs.uv
-          pkgs.tailwindcss_4
-          pkgs.watchman
-        ];
+        packages =
+          [
+            python
+          ]
+          ++ devPackages;
         env =
           {
             UV_PYTHON_DOWNLOADS = "never";
@@ -204,13 +211,11 @@
       };
       # This devShell uses uv2nix to construct a virtual environment purely from Nix, using the same dependency specification as the application.
       default = pkgs.mkShell {
-        packages = [
-          wrappedTmux
-          virtualenvDev
-          pkgs.uv
-          pkgs.tailwindcss_4
-          pkgs.watchman
-        ];
+        packages =
+          [
+            virtualenvDev
+          ]
+          ++ devPackages;
         env = {
           UV_NO_SYNC = "1";
           UV_PYTHON = python.interpreter;
