@@ -98,14 +98,13 @@
       venv = pythonSet.mkVirtualEnv "nixfastapi-venv" workspace.deps.default;
       mainPy = pkgs.runCommand "main.py" {buildInputs = [venv];} ''
         mkdir -p $out
-        cp ${./.}/main.py $out/main.py
+        cp ${./main.py} $out/main.py
         chmod +x $out/main.py
         patchShebangs $out/main.py
       '';
-      staticDirectory = pkgs.runCommand "staticDirectory" {} ''
+      staticDirectory = pkgs.runCommand "staticDirectory" {buildInputs = [pkgs.rsync];} ''
         mkdir -p $out/static
-        cp -r ${./.}/static/* $out/static/
-        ${pkgs.tailwindcss_4}/bin/tailwindcss -i ${./.}/static/input.css -o $out/static/output.css --minify --content "/static/templates/**/*.html"
+        rsync -a --exclude='output.css' ${./static}/ $out/static/
       '';
     in rec {
       # Create a docker image with nix-store paths as layers
@@ -113,6 +112,9 @@
         name = "nixfastapi-container";
         created = "now";
         contents = [staticDirectory mainPy];
+        extraCommands = ''
+          ${pkgs.tailwindcss_4}/bin/tailwindcss -i ${./static/input.css} -o ./static/output.css --minify
+        '';
         config = {
           Cmd = ["/main.py"];
           Volumes = {"/data" = {};};

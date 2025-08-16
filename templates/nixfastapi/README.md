@@ -14,6 +14,7 @@ nix flake show
 ```
 
 # Usage
+## Development Shell
 To start development shell:
 ```bash
 nix develop
@@ -22,11 +23,27 @@ or
 ```bash
 nix develop .#impure
 ```
-To build default package ( docker image ):
+
+## Build
+Build default package ( docker image ):
 ```bash
 nix build
 ```
-To build app as file bundle:
+Build app as file bundle:
 ```bash
 nix build .#bundledApp
 ```
+Build -> Load -> Run ( docker image ):
+```bash
+nix run
+```
+
+## Run tests
+```bash
+nix flake check
+```
+Build pytest results:
+```bash
+nix build .#checks.<system>.pytest
+```
+
