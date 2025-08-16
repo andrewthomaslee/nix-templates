@@ -13,8 +13,5 @@ cd $REPO_ROOT
 echo "🚀 Building bundled app..."
 nix build .#bundledApp
 
-echo "🌬️ Applying TailwindCSS"
-tailwindcss -i ./result/static/input.css -o ./result/static/output.css --minify
-
 echo "🏃 Running bundled app..."
 ./result/main.py

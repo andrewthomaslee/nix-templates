@@ -102,9 +102,10 @@
         chmod +x $out/main.py
         patchShebangs $out/main.py
       '';
-      staticDirectory = pkgs.runCommand "staticDirectory" {buildInputs = [pkgs.rsync];} ''
+      staticDirectory = pkgs.runCommand "staticDirectory" {buildInputs = [pkgs.rsync pkgs.tailwindcss_4];} ''
         mkdir -p $out/static
         rsync -av --exclude-from=${./.gitignore} ${./static}/ $out/static/
+        tailwindcss -i ${./static/input.css} -o ./static/output.css --minify
       '';
     in rec {
       # Create a docker image with nix-store paths as layers
