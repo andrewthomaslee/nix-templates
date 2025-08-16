@@ -9,3 +9,4 @@ docker
 .devenv
 output.css
 .ruff_cache
+flake.nix.backup

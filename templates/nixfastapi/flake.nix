@@ -130,41 +130,52 @@
         then docker
         else bundledApp;
     });
-    # buildLoadRun | buildBundledApp ( docker image or bundled app )
-    apps = forAllSystems (system: let
-      pkgs = nixpkgs.legacyPackages.${system};
-      buildLoadRun = pkgs.runCommand "buildLoadRun" {} ''
-        mkdir -p $out/bin
-        cp ${./scripts/buildLoadRun.sh} $out/bin/buildLoadRun
-        chmod +x $out/bin/buildLoadRun
-        patchShebangs $out/bin/buildLoadRun
-      '';
-      buildBundledApp = pkgs.runCommand "buildBundledApp" {} ''
-        mkdir -p $out/bin
-        cp ${./scripts/buildBundledApp.sh} $out/bin/buildBundledApp
-        chmod +x $out/bin/buildBundledApp
-        patchShebangs $out/bin/buildBundledApp
-      '';
-    in rec {
-      docker = {
-        type = "app";
-        program = "${buildLoadRun}/bin/buildLoadRun";
-        meta = {
-          description = "Run the Docker image";
+    # Dynamic script discovery for .sh and .py files
+    apps = forAllSystems (
+      system: let
+        pkgs = nixpkgs.legacyPackages.${system};
+        pythonSet = pythonSets.${system};
+        venv = pythonSet.mkVirtualEnv "nixfastapi-venv" workspace.deps.default;
+        inherit (pkgs.lib) filterAttrs hasSuffix mapAttrsToList genAttrs;
+
+        # App discovery and creation
+        appsBasedir = ./scripts;
+        appFiles = filterAttrs (name: type: type == "regular" && (hasSuffix ".sh" name || hasSuffix ".py" name)) (
+          builtins.readDir appsBasedir
+        );
+        appNames = mapAttrsToList (name: _: pkgs.lib.removeSuffix ".sh" (pkgs.lib.removeSuffix ".py" name)) appFiles;
+
+        # Shared build logic for creating executable scripts
+        makeExecutable = appName: ''
+          mkdir -p $out/bin
+          # Determine actual file path (sh takes precedence)
+          if [ -f ${appsBasedir}/${appName}.sh ]; then
+            cp ${appsBasedir}/${appName}.sh $out/bin/${appName}
+          else
+            cp ${appsBasedir}/${appName}.py $out/bin/${appName}
+          fi
+          chmod +x $out/bin/${appName}
+          patchShebangs $out/bin/${appName}
+        '';
+
+        # Create individual apps
+        makeApp = appName: {
+          type = "app";
+          program = "${pkgs.runCommand appName {buildInputs = [pkgs.bash venv];} (makeExecutable appName)}/bin/${appName}";
+          meta = {description = "Run ${appName}";};
         };
-      };
-      bundledApp = {
-        type = "app";
-        program = "${buildBundledApp}/bin/buildBundledApp";
-        meta = {
-          description = "Run the bundled app";
-        };
-      };
-      default =
-        if pkgs.stdenv.isLinux
-        then docker
-        else bundledApp;
-    });
+
+        # Generate all script apps
+        scriptApps = genAttrs appNames makeApp;
+
+        # Platform-specific default
+        platformDefault =
+          if pkgs.stdenv.isLinux
+          then scriptApps.buildLoadRun
+          else scriptApps.buildBundledApp;
+      in
+        scriptApps // {default = platformDefault;}
+    );
 
     devShells = forAllSystems (system: let
       pkgs = nixpkgs.legacyPackages.${system};
