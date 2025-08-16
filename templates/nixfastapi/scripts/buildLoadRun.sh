@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 set -e  # Exit on any error
+# Immediately exit if REPO_ROOT is not set
+if [ -z "$REPO_ROOT" ]; then
+    echo "Error: REPO_ROOT is not set. Run this script from the Nix devShell."
+    exit 1
+fi
+cd $REPO_ROOT
 
 # Simple script to build, load, and run Docker image with Nix
 # 1. Build → 2. Load → 3. Run (with auto-cleanup)
