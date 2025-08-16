@@ -3,3 +3,8 @@ result
 __pycache__
 __marimo__
 docker
+.env
+.pytest_cache
+.direnv
+.devenv
+output.css
