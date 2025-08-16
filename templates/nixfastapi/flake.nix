@@ -217,6 +217,9 @@
           tailwindcss_4
           watchman
           yazi
+          brave
+          firefox
+          chromium
         ]
         ++ [wrappedTmux];
     in {
