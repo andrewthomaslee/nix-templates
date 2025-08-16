@@ -22,7 +22,7 @@ tmux new-window -t $SESSION_NAME -n "🐍FastAPI" -c "$REPO_ROOT"
 tmux send-keys -t $SESSION_NAME:1 "uvicorn main:app --port 8000 --host 0.0.0.0 --reload" C-m
 
 tmux new-window -t $SESSION_NAME -n "🌐Chromium" -c "$REPO_ROOT"
-tmux send-keys -t $SESSION_NAME:2 "chromium http://0.0.0.0:8000" C-m
+tmux send-keys -t $SESSION_NAME:2 "chromium  --user-data-dir=/tmp/chromium-data --new-window http://localhost:8000" C-m
 
 echo "Tmux created session ✨'$SESSION_NAME'✨"
 tmux attach-session -t $SESSION_NAME
