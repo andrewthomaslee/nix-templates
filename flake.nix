@@ -2,7 +2,7 @@
   description = "A Collection of Personal Nix Flake Templates";
 
   outputs = {self, ...}: {
-    defaultTemplate = self.templates.moscripts;
+    defaultTemplate = self.templates.nixfastapi;
     templates = {
       moscripts-x86_64-linux = {
         path = ./templates/moscripts-x86_64-linux;
