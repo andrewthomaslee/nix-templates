@@ -195,9 +195,9 @@
         shellHook = ''
           unset PYTHONPATH
           export REPO_ROOT=$(git rev-parse --show-toplevel)
-          uv sync
+          ${pkgs.uv}/bin/uv sync
           source .venv/bin/activate
-          $REPO_ROOT/scripts/tmux-startup.sh
+          source ${./scripts/tmux-startup.sh}
         '';
       };
       # This devShell uses uv2nix to construct a virtual environment purely from Nix, using the same dependency specification as the application.
@@ -218,7 +218,7 @@
           unset PYTHONPATH
           export REPO_ROOT=$(git rev-parse --show-toplevel)
           source ${virtualenvDev}/bin/activate
-          $REPO_ROOT/scripts/tmux-startup.sh
+          source ${./scripts/tmux-startup.sh}
         '';
       };
     });
