@@ -1,2 +1,5 @@
-result/
-*.lock
+result
+.venv
+__pycache__
+__marimo__
+docker
