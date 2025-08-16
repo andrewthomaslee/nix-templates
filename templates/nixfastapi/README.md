@@ -53,5 +53,5 @@ Build pytest results:
 nix build .#checks.<system>.pytest
 ```
 
-###### Firefox & datastar issue ...
-Firefox browser fights `datastar`. Makings styles not work. To fix this, use a different browser or disable datastar.
+###### Firefox issues with CSS...
+Firefox browser at the moment has issues with loading style sheets. To avoid this issue, you can use chromium browser, which is included in the devShell along with brave and firefox, or stop using certain CSS features.
