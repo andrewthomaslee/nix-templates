@@ -8,4 +8,4 @@ echo "🚀 Building bundled app..."
 nix build .#bundledApp
 
 echo "🏃 Running bundled app..."
-source ./result/main.py
+./result/main.py

@@ -133,13 +133,17 @@
     # buildLoadRun | buildBundledApp ( docker image or bundled app )
     apps = forAllSystems (system: let
       pkgs = nixpkgs.legacyPackages.${system};
-      buildLoadRun = pkgs.writeShellScriptBin "buildLoadRun" ''
-        #!/usr/bin/env bash
-        exec ${./scripts/buildLoadRun.sh} "$@"
+      buildLoadRun = pkgs.runCommand "buildLoadRun" {} ''
+        mkdir -p $out/bin
+        cp ${./scripts/buildLoadRun.sh} $out/bin/buildLoadRun
+        chmod +x $out/bin/buildLoadRun
+        patchShebangs $out/bin/buildLoadRun
       '';
-      buildBundledApp = pkgs.writeShellScriptBin "buildBundledApp" ''
-        #!/usr/bin/env bash
-        exec ${./scripts/buildBundledApp.sh} "$@"
+      buildBundledApp = pkgs.runCommand "buildBundledApp" {} ''
+        mkdir -p $out/bin
+        cp ${./scripts/buildBundledApp.sh} $out/bin/buildBundledApp
+        chmod +x $out/bin/buildBundledApp
+        patchShebangs $out/bin/buildBundledApp
       '';
     in rec {
       docker = {

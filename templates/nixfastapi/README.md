@@ -33,9 +33,15 @@ Build app as file bundle:
 ```bash
 nix build .#bundledApp
 ```
+
+## Run
 Build -> Load -> Run ( docker image ):
 ```bash
 nix run
+```
+Build -> Run ( bundled app ):
+```bash
+nix run .#bundledApp
 ```
 
 ## Run tests
@@ -47,3 +53,5 @@ Build pytest results:
 nix build .#checks.<system>.pytest
 ```
 
+###### Firefox & datastar issue ...
+Firefox browser fights `datastar`. Makings styles not work. To fix this, use a different browser or disable datastar.
