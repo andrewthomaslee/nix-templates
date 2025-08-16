@@ -104,8 +104,8 @@
       '';
       staticDirectory = pkgs.runCommand "staticDirectory" {buildInputs = [pkgs.rsync pkgs.tailwindcss_4];} ''
         mkdir -p $out/static
-        rsync -av --exclude-from=${./.gitignore} ${./static}/ $out/static/
-        tailwindcss -i ${./static/input.css} -o ./static/output.css --minify
+        tailwindcss -i ${./static/input.css} -o $out/static/output.css --minify
+        rsync -av --exclude='input.css' ${./static}/ $out/static/
       '';
     in rec {
       # Create a docker image with nix-store paths as layers
@@ -113,10 +113,6 @@
         name = "nixfastapi-container";
         created = "now";
         contents = [staticDirectory mainPy];
-        extraCommands = ''
-          ${pkgs.tailwindcss_4}/bin/tailwindcss -i ${./static/input.css} -o ./static/output.css --minify
-          rm ./static/input.css
-        '';
         config = {
           Cmd = ["/main.py"];
           Volumes = {"/data" = {};};
