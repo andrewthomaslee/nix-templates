@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% block head %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/gh/starfederation/datastar@main/bundles/datastar.js" integrity="sha384-VfBZ5oTERkH3K5y2jm72JoK7xsp78tr3we2C+rhUhQKZocSbXKNzOhbpayCsB6wy" crossorigin="anonymous"></script>
+    <link href="{{ url_for('static', path='/output.css') }}" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', path='/assets/favicon.ico') }}">
+    <title>{% block title %}nixfastapi{% endblock %}</title>
+    {% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+    {% block content %}{% endblock %}
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Home Page{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-100 py-6 flex flex-col justify-center sm:py-12">
+    <div class="relative py-3 sm:max-w-xl sm:mx-auto">
+        <div class="absolute inset-0 bg-gradient-to-r from-cyan-400 to-light-blue-500 shadow-lg transform -skew-y-6 sm:skew-y-0 sm:-rotate-6 sm:rounded-3xl"></div>
+        <div class="relative px-4 py-10 bg-white shadow-lg sm:rounded-3xl sm:p-20">
+            <div class="max-w-md mx-auto">
+                <div class="flex items-center justify-center">
+                    <h1 class="text-2xl font-bold text-gray-800">Welcome to nixfastapi</h1>
+                </div>
+                <div class="divide-y divide-gray-200">
+                    <div class="py-8 text-base leading-6 space-y-4 text-gray-700 sm:text-lg sm:leading-7">
+                        <p>This is the home page of your FastAPI application with Jinja2 template inheritance.</p>
+                        <ul class="list-disc space-y-2">
+                            <li class="flex items-start">
+                                <span class="flex items-center h-6">
+                                    <svg class="h-6 w-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                </span>
+                                <p class="ml-2">All pages inherit from base.html</p>
+                            </li>
+                            <li class="flex items-start">
+                                <span class="flex items-center h-6">
+                                    <svg class="h-6 w-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                </span>
+                                <p class="ml-2">CSS and DataStar CDN are included automatically</p>
+                            </li>
+                            <li class="flex items-start">
+                                <span class="flex items-center h-6">
+                                    <svg class="h-6 w-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                </span>
+                                <p class="ml-2">Easy to maintain and extend</p>
+                            </li>
+                        </ul>
+                        <div class="pt-6 text-base leading-6 font-bold sm:text-lg sm:leading-7">
+                            <p>Try creating more pages that extend base.html!</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

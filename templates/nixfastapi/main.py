@@ -19,13 +19,13 @@ app.add_middleware(GZipMiddleware, minimum_size=1000, compresslevel=9)
 
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 
-templates = Jinja2Templates(directory=BASE_DIR / "static" / "templates")
+templates = Jinja2Templates(directory=BASE_DIR / "static" / "templates") 
 
 @app.get("/", response_class=HTMLResponse)
-async def read_hello(request: Request):
+async def read_index(request: Request):
     return templates.TemplateResponse(
-        request=request, name="hello.html", context={}
-    )   
+        request=request, name="index.html", context={}
+    )
 
 @app.get("/favicon.ico")
 async def favicon(request: Request):
