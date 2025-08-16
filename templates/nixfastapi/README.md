@@ -15,6 +15,14 @@ nix flake show
 
 # Usage
 ## Development Shell
+The development shell is a Nix shell with all dependencies installed. You will be dropped into a tmux session with a `🌬️Tailwind` watcher, a uvicorn `🐍FastAPI` hot reload server, and a `🦁Brave` web browser.
+
+
+tmux shortcuts:
+- `Ctrl+b + d` → Detach from tmux session
+- `Ctrl+b + c` → Create new window
+
+
 To start development shell:
 ```bash
 nix develop
@@ -53,5 +61,12 @@ Build pytest results:
 nix build .#checks.<system>.pytest
 ```
 
-###### Firefox issues with CSS...
-Firefox browser at the moment has issues with loading style sheets. To avoid this issue, you can use chromium browser, which is included in the devShell along with brave and firefox, or stop using certain CSS features.
+## Web Browsers
+Included web browsers in the devShell:
+- Brave
+- Firefox
+- Ladybird
+- Chromium ( Linux only )
+
+### Firefox issues with CSS...
+Firefox browser at the moment has issues with rendering certain CSS styles. To avoid this issue use another browser or stop using certain CSS features.

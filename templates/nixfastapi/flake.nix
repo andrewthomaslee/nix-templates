@@ -219,8 +219,9 @@
           yazi
           brave
           firefox
-          chromium
+          ladybird
         ]
+        ++ (lib.optionals pkgs.stdenv.isLinux [chromium])
         ++ [wrappedTmux];
     in {
       # This devShell simply adds Python & uv and undoes the dependency leakage done by Nixpkgs Python infrastructure.
