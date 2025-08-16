@@ -195,6 +195,7 @@
         shellHook = ''
           unset PYTHONPATH
           export REPO_ROOT=$(git rev-parse --show-toplevel)
+          cd $REPO_ROOT
           ${pkgs.uv}/bin/uv sync
           source .venv/bin/activate
           source ${./scripts/tmux-startup.sh}
