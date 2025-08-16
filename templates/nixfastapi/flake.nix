@@ -145,10 +145,16 @@
       docker = {
         type = "app";
         program = "${buildLoadRun}/bin/buildLoadRun";
+        meta = {
+          description = "Run the Docker image";
+        };
       };
       bundledApp = {
         type = "app";
         program = "${buildBundledApp}/bin/buildBundledApp";
+        meta = {
+          description = "Run the bundled app";
+        };
       };
       default =
         if pkgs.stdenv.isLinux
