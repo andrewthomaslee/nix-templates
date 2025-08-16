@@ -166,7 +166,7 @@
       virtualenvDev = editablePythonSet.mkVirtualEnv "nixfastapi-dev" workspace.deps.all;
       #------------------------------------------------------------------------------#
       # tmux.conf file
-      myTmuxConf = pkgs.writeText "tmux.conf" ''
+      tmuxConf = pkgs.writeText "tmux.conf" ''
         set -g mouse on
         set-option -g default-command "${pkgs.bash}/bin/bash -l"
       '';
