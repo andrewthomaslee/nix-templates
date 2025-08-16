@@ -8,3 +8,4 @@ docker
 .direnv
 .devenv
 output.css
+.ruff_cache

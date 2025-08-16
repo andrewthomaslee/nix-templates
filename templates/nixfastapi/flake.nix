@@ -104,7 +104,7 @@
       '';
       staticDirectory = pkgs.runCommand "staticDirectory" {buildInputs = [pkgs.rsync];} ''
         mkdir -p $out/static
-        rsync -a --exclude='output.css' ${./static}/ $out/static/
+        rsync -av --exclude-from=${./.gitignore} ${./static}/ $out/static/
       '';
     in rec {
       # Create a docker image with nix-store paths as layers
@@ -114,6 +114,7 @@
         contents = [staticDirectory mainPy];
         extraCommands = ''
           ${pkgs.tailwindcss_4}/bin/tailwindcss -i ${./static/input.css} -o ./static/output.css --minify
+          rm ./static/input.css
         '';
         config = {
           Cmd = ["/main.py"];
@@ -172,7 +173,7 @@
       '';
       # wrapper script for tmux
       wrappedTmux = pkgs.writeShellScriptBin "tmux" ''
-        exec ${pkgs.tmux}/bin/tmux -f ${myTmuxConf} "$@"
+        exec ${pkgs.tmux}/bin/tmux -f ${tmuxConf} "$@"
       '';
     in {
       # This devShell simply adds Python & uv and undoes the dependency leakage done by Nixpkgs Python infrastructure.

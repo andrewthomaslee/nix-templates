@@ -8,3 +8,4 @@ result
 .devenv
 output.css
 docker
+.ruff_cache
