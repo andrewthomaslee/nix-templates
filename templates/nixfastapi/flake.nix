@@ -109,7 +109,7 @@
       '';
       curl = pkgs.runCommand "curl" {} ''
         mkdir -p $out
-        ln -s ${pkgs.curl}/curl $out/curl
+        ln -s ${pkgs.curl}/bin/curl $out/curl
       '';
       layers = [curl staticDirectory mainPy];
     in rec {

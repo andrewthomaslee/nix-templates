@@ -31,6 +31,10 @@ async def read_index(request: Request):
 async def favicon(request: Request):
     return FileResponse(BASE_DIR / "static" / "assets" / "favicon.ico")
 
+@app.get("/health")
+async def health(request: Request):
+    return {"status": "ok"}
+
 if __name__ == "__main__":
     hello()
     uvicorn.run(app, host="0.0.0.0", port=8000)
