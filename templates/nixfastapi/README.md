@@ -59,9 +59,6 @@ nix build .#checks.<system>.pytest
 
 ## Web Browsers
 Included web browsers in the devShell:
-- Brave
+- Brave ( Default )
 - Firefox
 - Chromium ( Linux only )
-
-### Firefox issues with CSS...
-Firefox browser at the moment has issues with rendering certain CSS styles. To avoid this issue use another browser or stop using certain CSS features.
