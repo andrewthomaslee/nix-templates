@@ -33,23 +33,19 @@ nix develop .#impure
 ```
 
 ## Build
-Build default package ( docker image ):
+Build default package:
 ```bash
 nix build
 ```
-Build app as file bundle:
-```bash
-nix build .#bundledApp
-```
 
 ## Run
-Build -> Load -> Run ( docker image ):
+Launch fastapi dev server:
 ```bash
 nix run
 ```
-Build -> Run ( bundled app ):
+Launch docker compose:
 ```bash
-nix run .#bundledApp
+nix run .#docker-compose
 ```
 
 ## Run tests

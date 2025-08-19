@@ -17,7 +17,7 @@ BASE_DIR = Path(__file__).parent
 app = FastAPI()
 app.add_middleware(GZipMiddleware, minimum_size=1000, compresslevel=9)
 
-app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
+app.mount("/static", StaticFiles(directory=BASE_DIR / "static", follow_symlink=True), name="static")
 
 templates = Jinja2Templates(directory=BASE_DIR / "static" / "templates") 
 
@@ -36,5 +36,4 @@ async def health(request: Request):
     return {"status": "ok"}
 
 if __name__ == "__main__":
-    hello()
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=7999)

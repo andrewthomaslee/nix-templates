@@ -96,41 +96,22 @@
       pkgs = nixpkgs.legacyPackages.${system};
       pythonSet = pythonSets.${system};
       venv = pythonSet.mkVirtualEnv "nixfastapi-venv" workspace.deps.default;
-      mainPy = pkgs.runCommand "main.py" {buildInputs = [venv];} ''
-        mkdir -p $out
-        cp ${./main.py} $out/main.py
-        chmod +x $out/main.py
-        patchShebangs $out/main.py
-      '';
-      staticDirectory = pkgs.runCommand "staticDirectory" {buildInputs = [pkgs.rsync pkgs.tailwindcss_4];} ''
-        mkdir -p $out/static
-        tailwindcss -i ${./static/input.css} -o $out/static/output.css --minify
-        rsync -av --exclude='input.css' ${./static}/ $out/static/
-      '';
-      curl = pkgs.runCommand "curl" {} ''
-        mkdir -p $out
-        ln -s ${pkgs.curl}/bin/curl $out/curl
-      '';
-      layers = [curl staticDirectory mainPy];
-    in rec {
-      # Create a docker image with nix-store paths as layers
-      docker = pkgs.dockerTools.buildLayeredImage {
-        name = "nixfastapi-container";
-        created = "now";
-        contents = layers;
-        config = {
-          Cmd = ["/main.py"];
-          Volumes = {"/data" = {};};
-        };
+    in {
+      default = pkgs.stdenv.mkDerivation {
+        name = "nixfastapi-package";
+        src = ./.;
+        buildInputs = [venv];
+        installPhase = ''
+          mkdir -p $out/static
+          cp -r ${./static}/* $out/static/
+          ${pkgs.tailwindcss_4}/bin/tailwindcss -i ${./static/input.css} -o ./static/output.css
+          cp ./static/output.css $out/static/output.css
+          cp ${./main.py} $out/main.py
+          chmod +x $out/main.py
+          patchShebangs $out/main.py
+          ln -s ${pkgs.curl}/bin/curl $out/curl
+        '';
       };
-      bundledApp = pkgs.symlinkJoin {
-        name = "nixfastapi-bundle";
-        paths = layers;
-      };
-      default =
-        if pkgs.stdenv.isLinux
-        then docker
-        else bundledApp;
     });
     # Dynamic script discovery for .sh and .py files
     apps = forAllSystems (
@@ -169,14 +150,8 @@
 
         # Generate all script apps
         scriptApps = genAttrs appNames makeApp;
-
-        # Platform-specific default
-        platformDefault =
-          if pkgs.stdenv.isLinux
-          then scriptApps.buildLoadRun
-          else scriptApps.buildBundledApp;
       in
-        scriptApps // {default = platformDefault;}
+        scriptApps // {default = scriptApps.fastapi-dev;}
     );
 
     devShells = forAllSystems (system: let
@@ -230,6 +205,7 @@
           tailwindcss_4
           watchman
           yazi
+          lazydocker
           brave
           firefox
         ]
@@ -256,7 +232,6 @@
           export REPO_ROOT=$(git rev-parse --show-toplevel)
           ${pkgs.uv}/bin/uv sync
           source .venv/bin/activate
-          source ${./scripts/tmuxStartup.sh}
         '';
       };
       # This devShell uses uv2nix to construct a virtual environment purely from Nix, using the same dependency specification as the application.
@@ -275,7 +250,6 @@
           unset PYTHONPATH
           export REPO_ROOT=$(git rev-parse --show-toplevel)
           source ${virtualenvDev}/bin/activate
-          source ${./scripts/tmuxStartup.sh}
         '';
       };
     });

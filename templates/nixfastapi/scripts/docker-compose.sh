@@ -7,7 +7,7 @@ if [ -z "$REPO_ROOT" ]; then
 fi
 cd $REPO_ROOT
 
-SESSION_NAME="nixfastapi-dev"
+SESSION_NAME="nixfastapi-docker-compose"
 
 # Function to handle user choice when session exists
 handle_existing_session() {
@@ -54,14 +54,14 @@ if tmux has-session -t $SESSION_NAME 2>/dev/null; then
     handle_existing_session
 fi
 
-tmux new-session -d -s $SESSION_NAME -n "🌬️Tailwind" -c "$REPO_ROOT"
-tmux send-keys -t $SESSION_NAME:0 "tailwindcss -i ./static/input.css -o ./static/output.css --watch" C-m
+tmux new-session -d -s $SESSION_NAME -n "🐋Docker" -c "$REPO_ROOT"
+tmux send-keys -t $SESSION_NAME:0 "docker compose up" C-m
 
-tmux new-window -t $SESSION_NAME -n "🐍FastAPI" -c "$REPO_ROOT"
-tmux send-keys -t $SESSION_NAME:1 "uvicorn main:app --port 8000 --host 0.0.0.0 --reload" C-m
+tmux new-window -t $SESSION_NAME -n "🪵Lazydocker" -c "$REPO_ROOT"
+tmux send-keys -t $SESSION_NAME:1 "lazydocker" C-m
 
 tmux new-window -t $SESSION_NAME -n "🦁Brave" -c "$REPO_ROOT"
-tmux send-keys -t $SESSION_NAME:2 "brave --user-data-dir=/tmp/brave-dev-data --new-window http://0.0.0.0:8000" C-m
+tmux send-keys -t $SESSION_NAME:2 "brave --user-data-dir=/tmp/brave-dev-data --new-window --incognito http://0.0.0.0:7999" C-m
 
 echo "Tmux created session ✨'$SESSION_NAME'✨"
 tmux attach-session -t $SESSION_NAME
