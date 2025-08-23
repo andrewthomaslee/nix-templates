@@ -12,6 +12,10 @@
         path = ./templates/moscripts;
         description = "Build a python scripts package";
       };
+      moscripts-OLD = {
+        path = ./templates/moscripts-OLD;
+        description = "Build a python scripts package";
+      };
       nixfastapi = {
         path = ./templates/nixfastapi;
         description = "FastAPI managed by Nix and uv2nix";

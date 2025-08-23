@@ -39,20 +39,56 @@
     # Create attrset for each system
     forAllSystems = lib.genAttrs (import systems);
 
-    # App discovery and creation
-    appsBasedir = ./apps;
-    appFiles = filterAttrs (name: type: type == "regular" && hasSuffix ".py" name) (
-      builtins.readDir appsBasedir
-    );
-    appNames = lib.mapAttrsToList (name: _: lib.removeSuffix ".py" name) appFiles;
+    # Load standalone Python scripts from ./pythonScripts directory (with inline metadata)
+    loadStandaloneScripts = dir:
+      lib.mapAttrs
+      (name: _: uv2nix.lib.scripts.loadScript {script = dir + "/${name}";})
+      (lib.filterAttrs (name: type: type == "regular" && lib.hasSuffix ".py" name)
+        (builtins.readDir dir));
 
-    # Shared build logic for creating executable scripts
-    makeExecutable = appName: ''
-      mkdir -p $out/bin
-      cp ${appsBasedir}/${appName}.py $out/bin/${appName}
-      chmod +x $out/bin/${appName}
-      patchShebangs $out/bin/${appName}
-    '';
+    # Load Python apps from ./apps directory (simple files, no inline metadata)
+    loadApps = dir:
+      lib.mapAttrs
+      (name: _: dir + "/${name}")
+      (lib.filterAttrs (name: type: type == "regular" && lib.hasSuffix ".py" name)
+        (builtins.readDir dir));
+
+    standaloneScripts = loadStandaloneScripts ./pythonScripts;
+    apps = loadApps ./apps;
+
+    # Create derivations for standalone scripts
+    standaloneScriptDerivations = forAllSystems (
+      system: let
+        pkgs = nixpkgs.legacyPackages.${system};
+        python = pkgs.python313;
+        baseSet = pkgs.callPackage pyproject-nix.build.packages {
+          inherit python;
+        };
+        pyprojectOverrides = _final: _prev: {};
+      in
+        lib.mapAttrs (
+          name: script: let
+            overlay = script.mkOverlay {
+              sourcePreference = "wheel";
+            };
+            pythonSet = baseSet.overrideScope (
+              lib.composeManyExtensions [
+                pyproject-build-systems.overlays.default
+                overlay
+                pyprojectOverrides
+              ]
+            );
+          in
+            pkgs.writeScript script.name (
+              script.renderScript {
+                venv = script.mkVirtualEnv {
+                  inherit pythonSet;
+                };
+              }
+            )
+        )
+        standaloneScripts
+    );
 
     # use uv2nix to load workspace and discover pyproject.toml
     workspace = uv2nix.lib.workspace.loadWorkspace {workspaceRoot = ./.;};
@@ -89,19 +125,30 @@
                     pytest = stdenv.mkDerivation {
                       name = "${final.moscripts.name}-pytest";
                       inherit (final.moscripts) src;
-                      nativeBuildInputs = [virtualenv];
+                      nativeBuildInputs = [virtualenv pkgs.which pkgs.nix];
                       dontConfigure = true;
-                      # the build phase runs the tests.
                       buildPhase = ''
                         runHook preBuild
-                        pytest --junit-xml=pytest.xml
+                        pytest --cov tests --cov-report html tests
                         runHook postBuild
                       '';
-                      # Install the test output
                       installPhase = ''
                         runHook preInstall
-                        mv pytest.xml $out
+                        mv htmlcov $out
                         runHook postInstall
+                      '';
+                    };
+                    pyrefly = stdenv.mkDerivation {
+                      name = "${final.moscripts.name}-pyrefly";
+                      inherit (final.moscripts) src;
+                      nativeBuildInputs = [virtualenv pkgs.which pkgs.nix];
+                      dontConfigure = true;
+                      dontInstall = true;
+                      buildPhase = ''
+                        runHook preBuild
+                        mkdir $out
+                        pyrefly check --debug-info $out/pyrefly.json --output-format json --config pyproject.toml
+                        runHook postBuild
                       '';
                     };
                   };
@@ -122,6 +169,8 @@
                   (old.src + "/src/")
                   (old.src + "/tests/")
                   (old.src + "/apps/")
+                  (old.src + "/pythonScripts/")
+                  (old.src + "/shellScripts/")
                 ];
               };
               nativeBuildInputs =
@@ -152,111 +201,173 @@
     );
   in {
     # Create individual packages for each app and their container variants
-    packages = forAllSystems (system: let
-      pkgs = nixpkgs.legacyPackages.${system};
-      pythonSet = pythonSets.${system}.standard;
-      venv = pythonSet.mkVirtualEnv "moscripts-default-env" (uv2nix.lib.workspace.loadWorkspace {workspaceRoot = ./.;}).deps.default;
+    packages = forAllSystems (
+      system: let
+        pkgs = nixpkgs.legacyPackages.${system};
+        pythonSet = pythonSets.${system}.standard;
+        venv = pythonSet.mkVirtualEnv "moscripts-venv" workspace.deps.default;
+        # alpine base docker image
+        alpine = pkgs.dockerTools.pullImage {
+          imageName = "alpine";
+          imageDigest = "sha256:4bcff63911fcb4448bd4fdacec207030997caf25e9bea4045fa6c8c44de311d1";
+          finalImageName = "alpine";
+          finalImageTag = "latest";
+          sha256 = "sha256-1Af8p6cYQs8sxlowz4BC6lC9eAOpNWYnIhCN7BSDKL0=";
+          os = "linux";
+          arch =
+            if system == "x86_64-linux"
+            then "amd64"
+            else if system == "aarch64-linux"
+            then "arm64"
+            else system;
+        };
 
-      makePatchedScript = appName:
-        pkgs.runCommand appName {buildInputs = [venv];} (makeExecutable appName);
-
-      makeDockerImage = appName: imageName:
-        pkgs.dockerTools.buildLayeredImage {
-          name = "${imageName}";
-          contents = [(makePatchedScript appName)];
-          config = {
-            Cmd = ["/bin/${appName}"];
+        # Helper to create executable scripts (for standalone scripts)
+        makeStandaloneExecutable = scriptName: scriptDrv:
+          pkgs.stdenv.mkDerivation {
+            name = "${scriptName}-in-bin";
+            buildCommand = ''
+              mkdir -p $out/bin
+              cp ${scriptDrv} $out/bin/${scriptName}
+              chmod +x $out/bin/${scriptName}
+            '';
           };
-        };
 
-      makeStandalonePackage = appName:
-        pkgs.stdenv.mkDerivation {
-          name = appName;
-          buildCommand = makeExecutable appName;
-          buildInputs = [venv];
-        };
+        # Helper to create executable apps (for apps that need moscripts venv)
+        makeAppExecutable = appName: appPath:
+          pkgs.stdenv.mkDerivation {
+            name = "${appName}-in-bin";
+            buildCommand = ''
+              mkdir -p $out/bin
+              cp ${appPath} $out/bin/${appName}
+              chmod +x $out/bin/${appName}
+              patchShebangs $out/bin/${appName}
+            '';
+            buildInputs = [venv];
+          };
 
-      # Helper function to create container images for bundled package
-      makeBundledDockerImage = appName: makeDockerImage appName "${appName}-container";
+        # Helper to create docker images for standalone scripts
+        makeDockerImage = scriptName: scriptDrv:
+          pkgs.dockerTools.buildLayeredImage {
+            name = "${scriptName}-container";
+            fromImage = alpine;
+            contents = [(makeStandaloneExecutable scriptName scriptDrv) pkgs.curl pkgs.nix];
+            config = {
+              Cmd = ["/bin/${scriptName}"];
+            };
+          };
 
-      bundledPackages = {
-        # Standalone packages in /bin/appsName
+        # Helper to create docker images for apps
+        makeAppDockerImage = appName: appPath:
+          pkgs.dockerTools.buildLayeredImage {
+            name = "${appName}-container";
+            fromImage = alpine;
+            contents = [(makeAppExecutable appName appPath) pkgs.curl pkgs.nix];
+            config = {
+              Cmd = ["/bin/${appName}"];
+            };
+          };
+
+        # Create binary packages for standalone scripts
+        standaloneBinaryPackages =
+          lib.mapAttrs' (
+            name: drv:
+              lib.nameValuePair (lib.removeSuffix ".py" name)
+              (makeStandaloneExecutable (lib.removeSuffix ".py" name) drv)
+          )
+          standaloneScriptDerivations.${system};
+
+        # Create container packages for standalone scripts
+        standaloneContainerPackages =
+          if pkgs.stdenv.isLinux
+          then
+            lib.mapAttrs' (
+              name: drv:
+                lib.nameValuePair "${lib.removeSuffix ".py" name}-container"
+                (makeDockerImage (lib.removeSuffix ".py" name) drv)
+            )
+            standaloneScriptDerivations.${system}
+          else {};
+
+        # Create binary packages for apps
+        appBinaryPackages =
+          lib.mapAttrs' (
+            name: appPath: let
+              appName = lib.removeSuffix ".py" name;
+            in
+              lib.nameValuePair appName (makeAppExecutable appName appPath)
+          )
+          apps;
+
+        # Create container packages for apps
+        appContainerPackages =
+          if pkgs.stdenv.isLinux
+          then
+            lib.mapAttrs' (
+              name: appPath: let
+                appName = lib.removeSuffix ".py" name;
+              in
+                lib.nameValuePair "${appName}-container" (makeAppDockerImage appName appPath)
+            )
+            apps
+          else {};
+
+        # Create a default package that bundles all binary packages
         default = pkgs.symlinkJoin {
           name = "moscripts-bundled-apps";
-          paths = map makePatchedScript appNames;
+          paths = lib.attrValues standaloneBinaryPackages ++ lib.attrValues appBinaryPackages;
           meta = {
-            description = "Bundled moscripts applications";
-            longDescription = "A collection of Python scripts from the apps directory, packaged as executable binaries with patched shebangs";
+            description = "Bundled moscripts applications and scripts";
+            longDescription = "A collection of Python scripts from the apps and scripts directories, packaged as executable binaries";
           };
         };
-        # Container images in a single directory
-        bundledContainers = pkgs.stdenv.mkDerivation {
-          name = "moscripts-bundled-container-apps";
-          buildCommand = ''
-            mkdir -p $out
-            ${lib.concatMapStrings (appName: ''
-                cp ${(makeBundledDockerImage appName)} $out/${appName}-container.tar.gz
-              '')
-              appNames}
-          '';
-          meta = {
-            description = "Bundled moscripts container applications";
-            longDescription = "A collection of Python scripts from the apps directory, packaged as container images in a single output directory";
-          };
-        };
-      };
-
-      # Standalone packages (named after the app)
-      standalonePackages = lib.genAttrs appNames makeStandalonePackage;
-
-      # Container packages (named after the app-container)
-      containerPackages =
-        if pkgs.stdenv.isLinux
-        then
-          lib.foldl' (acc: appName:
-            acc
-            // {
-              "${appName}-container" = makeDockerImage appName "${appName}-container";
-            })
-          {}
-          appNames
-        else {};
-    in
-      bundledPackages // standalonePackages // containerPackages);
+      in
+        {
+          inherit default;
+        }
+        // standaloneBinaryPackages
+        // standaloneContainerPackages
+        // appBinaryPackages
+        // appContainerPackages
+    );
 
     # Create apps that are runnable with `nix run .#<app>`
-    apps = forAllSystems (system: let
-      pkgs = nixpkgs.legacyPackages.${system};
-      pythonSet = pythonSets.${system}.standard;
-      venv = pythonSet.mkVirtualEnv "moscripts-default-env" (uv2nix.lib.workspace.loadWorkspace {workspaceRoot = ./.;}).deps.default;
-
-      makePatchedScript = appName:
-        pkgs.runCommand appName {buildInputs = [venv];} (makeExecutable appName);
-
-      makeApp = appName: {
-        type = "app";
-        program = "${makePatchedScript appName}/bin/${appName}";
-        meta = {
-          name = appName;
-          description = "Python script ${appName} from moscripts";
+    apps = forAllSystems (
+      system: let
+        pkgs = nixpkgs.legacyPackages.${system};
+        # Helper to create runnable apps
+        makeRunnableApp = appName: {
+          type = "app";
+          program = "${self.packages.${system}.${appName}}/bin/${appName}";
+          meta = {
+            description = "Run ${appName} script";
+          };
         };
-      };
-    in
-      lib.genAttrs appNames makeApp);
+        # Filter out the 'default' package from the runnable apps
+        runnablePackages = lib.filterAttrs (name: _: name != "default" && !lib.hasSuffix "-container" name) self.packages.${system};
+      in
+        lib.mapAttrs' (name: _: lib.nameValuePair name (makeRunnableApp name))
+        runnablePackages
+    );
 
     devShells = forAllSystems (system: let
       pkgs = nixpkgs.legacyPackages.${system};
       python = pkgs.python313;
       editablePythonSet = pythonSets.${system}.editable;
-      virtualenvDev = editablePythonSet.mkVirtualEnv "moscripts-dev-env" (uv2nix.lib.workspace.loadWorkspace {workspaceRoot = ./.;}).deps.all;
+      virtualenvDev = editablePythonSet.mkVirtualEnv "moscripts-dev-venv" workspace.deps.all;
+      devPackages = [
+        pkgs.bash
+        pkgs.jq
+        pkgs.uv
+      ];
     in {
       # This devShell simply adds Python and undoes the dependency leakage done by Nixpkgs Python infrastructure.
       impure = pkgs.mkShell {
-        buildInputs = [pkgs.bashInteractive];
-        packages = [
-          python
-          pkgs.uv
-        ];
+        packages =
+          [
+            python
+          ]
+          ++ devPackages;
         env =
           {
             UV_PYTHON_DOWNLOADS = "never";
@@ -273,12 +384,12 @@
       };
 
       # This devShell uses uv2nix to construct a virtual environment purely from Nix, using the same dependency specification as the application.
-      uv2nix = pkgs.mkShell {
-        buildInputs = [pkgs.bashInteractive];
-        packages = [
-          virtualenvDev
-          pkgs.uv
-        ];
+      default = pkgs.mkShell {
+        packages =
+          [
+            virtualenvDev
+          ]
+          ++ devPackages;
         env = {
           UV_NO_SYNC = "1";
           UV_PYTHON = python.interpreter;
@@ -287,7 +398,9 @@
         shellHook = ''
           unset PYTHONPATH
           export REPO_ROOT=$(git rev-parse --show-toplevel)
+          export VIRTUAL_ENV=${virtualenvDev}
           source ${virtualenvDev}/bin/activate
+          source ${./shellScripts/configure-vscode.sh} # Configure VS Code
         '';
       };
     });
@@ -296,7 +409,14 @@
     checks = forAllSystems (system: let
       pythonSet = pythonSets.${system}.standard;
     in {
-      inherit (pythonSet.moscripts.passthru.tests) pytest;
+      inherit (pythonSet.moscripts.passthru.tests) pytest pyrefly;
     });
+
+    formatter = forAllSystems (
+      system: let
+        pkgs = nixpkgs.legacyPackages.${system};
+      in
+        pkgs.alejandra
+    );
   };
 }
